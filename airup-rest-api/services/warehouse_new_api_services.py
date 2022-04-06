@@ -51,16 +51,20 @@ class WarehouseApiService(Component):
 
         #id of the articles
         articles = []
+        param_article_id = []
         if warehouse_search_param.id:
             articles.append(warehouse_search_param.id)
+            param_article_id.append(warehouse_search_param.id)
 
+        locations = []
         if loc_domain:
             for location in self.env["stock.location"].search(loc_domain):
+                if location.id not in locations:
+                    locations.append(location.id)
                 for quant in self.env["stock.quant"].search([('location_id','=',location.id)]):
                     #get the articles id if is not already in the list of articles
                     if quant.product_id.id not in articles:
                         articles.append(quant.product_id.id)
-
 
         res= []
         WarehouseArticleShelfs = self.env.datamodels["warehouse.article.shelfs"]
@@ -69,8 +73,8 @@ class WarehouseApiService(Component):
         for article in self.env["product.product"].browse(articles):
             shelf_detail = []
             for quant in self.env['stock.quant'].search([('product_id','=',article.id)]):
-                if quant.location_id.usage == 'internal':
-                    shelf_detail.append(ShelfDetailWarehouse(amount=quant.quantity,bay=quant.location_id.bay if quant.location_id.bay else "bay to be assigned", row=quant.location_id.row if quant.location_id.row else "row to be assigned" ))
+                if quant.location_id.usage == 'internal' and quant.location_id.id in locations or quant.location_id.usage == 'internal' and quant.product_id.id in param_article_id:
+                    shelf_detail.append(ShelfDetailWarehouse(amount=quant.quantity,bay=quant.location_id.bay , row=quant.location_id.row ))
             res.append(WarehouseArticleShelfs(id=article.id,shelfs=shelf_detail,name=article.name))
 
         return res
