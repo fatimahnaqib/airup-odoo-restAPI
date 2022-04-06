@@ -1,14 +1,14 @@
 from odoo.addons.component.core import Component
 from odoo.addons.base_rest import restapi
 
+
 class ArticleApiService(Component):
     _inherit = "base.rest.service"
     _name = "article.new_api.service"
     _usage = "article"
     _collection = "base.rest.public.airup.services"
     _description = """
-        Article New API Services
-        Services developed with the new api provided by base_rest
+        Article New API Services developed with the new api provided by base_rest
     """
 
     @restapi.method(
@@ -24,14 +24,14 @@ class ArticleApiService(Component):
 
         res = []
         ArticleInfo = self.env.datamodels["article.short.info"]
-        for product in self.env["product.product"].search([('type','=','product')]):
+        for product in self.env["product.product"].search([('type', '=', 'product')]):
             res.append(ArticleInfo(id=product.id, name=product.name))
 
         return res
 
     @restapi.method(
         [(["/<string:id>"], "GET")],
-        output_param=restapi.Datamodel("article.info",is_list=True),
+        output_param=restapi.Datamodel("article.info", is_list=True),
         auth="public",
     )
     def get_by_id(self, id):
@@ -45,7 +45,7 @@ class ArticleApiService(Component):
         res = []
         ArticleInfo = self.env.datamodels["article.info"]
         for article in self.env["product.product"].search(domain):
-            res.append(ArticleInfo(id=article.id, name=article.name,description=article.description))
+            res.append(ArticleInfo(id=article.id, name=article.name, description=article.description))
         return res
 
     @restapi.method(
@@ -88,6 +88,10 @@ class ArticleApiService(Component):
         """
         Delete on Article
         """
-        self.env["product.product"].search([("id", "=", id)]).unlink()
+        product = self.env["product.product"].search([("id", "=", id)])
+        # if there is a product quantity
+        if product.qty_available > 0:
+            return {"response": 'The delete operation cannot be completed: another model requires the record being '
+                                'deleted.'}
+        product.unlink()
         return {"response": "Record has been deleted"}
-

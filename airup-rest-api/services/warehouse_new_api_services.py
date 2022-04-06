@@ -9,8 +9,7 @@ class WarehouseApiService(Component):
     _usage = "warehouse"
     _collection = "base.rest.public.airup.services"
     _description = """
-        Warehouse New API Services
-        Services developed with the new api provided by base_rest
+        Warehouse New API Services developed with the new api provided by base_rest
     """
 
     @restapi.method(
@@ -93,7 +92,10 @@ class WarehouseApiService(Component):
             [('name', '=', "Receipts"), ('code', '=', 'incoming')]).id
 
         location_dest_id = self.env['stock.location'].search(
-            [('shelf_location','=',True),('row','=',request_body.row),('bay','=',request_body.bay)],limit=1).id
+            [('shelf_location','=',True),('row','=',request_body.row),('bay','=',request_body.bay)],limit=1)
+
+        if not location_dest_id:
+            return {"response": "The Shelf does not exist in the system. Please create it."}
 
         article = self.env['product.product'].search([('id','=',request_body.id)])
 
@@ -102,7 +104,7 @@ class WarehouseApiService(Component):
         move_name = "Receipt Transfer for" + article.name
 
         # carry out receipt transfer for article
-        self.env['warehouse.helper.model'].create_transfer(operation_type_id,source_location_id,location_dest_id,article,move_name,amount)
+        self.env['warehouse.helper.model'].create_transfer(operation_type_id,source_location_id,location_dest_id.id,article,move_name,amount)
 
         return {"response": "Receipt Transfer has been carried out."}
 
@@ -119,16 +121,20 @@ class WarehouseApiService(Component):
         location_dest_id = self.env["stock.location"].search(
             [("name", "=", "Customers"), ('usage', '=', 'customer')])[0].id
         operation_type_id = self.env['stock.picking.type'].search(
-            [('name', '=', "Receipts"), ('code', '=', 'incoming')]).id
+            [('name', '=', "Delivery Orders"), ('code', '=', 'outgoing')]).id
         source_location_id = self.env['stock.location'].search(
-            [('shelf_location', '=', True), ('row', '=', request_body.row), ('bay', '=', request_body.bay)], limit=1).id
+            [('shelf_location', '=', True), ('row', '=', request_body.row), ('bay', '=', request_body.bay)], limit=1)
+
+        if not source_location_id:
+            return {"response": "The Shelf does not exist in the system."}
+
         article = self.env['product.product'].search([('id','=',request_body.id)])
 
         move_name = "Delivery Order for" + article.name
         amount = 1
 
         #carry out delivery order transfer for article
-        self.env['warehouse.helper.model'].create_transfer(operation_type_id,source_location_id,location_dest_id,article,move_name,amount)
+        self.env['warehouse.helper.model'].create_transfer(operation_type_id,source_location_id.id,location_dest_id,article,move_name,amount)
 
         return {"response": "Delivery Order has been carried out."}
 
@@ -145,6 +151,7 @@ class WarehouseHelperClass(models.Model):
         article_to_move = {
             "name": move_name,
             'product_id': article.id,
+            'product_uom_qty': amount,
             'quantity_done': amount,
             'product_uom': article_uom,
         }
